@@ -1,10 +1,10 @@
 pragma solidity =0.5.16;
-pragma experimental ABIEncoderV2;
 
 import './interfaces/IUniswapV2ERC20.sol';
 import './libraries/SafeMath.sol';
+import './libraries/GwynethContract.sol';
 
-contract UniswapV2ERC20 is IUniswapV2ERC20 {
+contract UniswapV2ERC20 is IUniswapV2ERC20, GwynethContract {
     using SafeMath for uint;
 
     string public constant name = 'Uniswap V2';
@@ -91,42 +91,5 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
         address recoveredAddress = ecrecover(digest, v, r, s);
         require(recoveredAddress != address(0) && recoveredAddress == owner, 'UniswapV2: INVALID_SIGNATURE');
         _approve(owner, spender, value);
-    }
-
-    struct StateDiff {
-        StateDiffAccount[] accounts;
-    }
-
-    struct StateDiffAccount {
-        StateDiffStorageSlot[] storageSlots;
-        uint balanceChange;
-    }
-
-    struct StateDiffStorageSlot {
-        bytes32 key;
-        bytes32 value;
-    }
-
-    function applyStateDelta(StateDiffAccount calldata accountChanges)
-        external
-        payable
-    {
-        //require(msg.sender == gwyneth, "not from gwyneth contract");
-        // Run over all state changes
-        for (uint256 i = 0; i < accountChanges.storageSlots.length; i++) {
-            // Apply the updated state to the storage
-            bytes32 key = accountChanges.storageSlots[i].key;
-            bytes32 value = accountChanges.storageSlots[i].value;
-            // Possible to check the slot against any variable.slot
-            // to e.g. throw a custom event
-            assembly {
-                sstore(key, value)
-            }
-        }
-
-        if (accountChanges.balanceChange > 0) {
-            (bool success, ) = msg.sender.call.value(accountChanges.balanceChange)("");
-            require(success, "Failed to send Ether");
-        }
     }
 }
